@@ -1,0 +1,21 @@
+{
+  "post": {
+    "slug": "post",
+    "name": "Posts",
+    "rest_base": "posts",
+    "viewable": true
+  },
+  "page": {
+    "slug": "page",
+    "name": "Pages",
+    "rest_base": "pages",
+    "viewable": true
+  },
+  "portfolio": {
+    "slug": "portfolio",
+    "name": "Portfolio",
+    "rest_base": "portfolio",
+    "viewable": true
+  }
+}
+

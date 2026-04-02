@@ -1,0 +1,11 @@
+[
+  {
+    "id": 41,
+    "taxonomy": "post_tag",
+    "slug": "featured",
+    "name": "Featured",
+    "description": "",
+    "parent": 0
+  }
+]
+

@@ -1,0 +1,21 @@
+[
+  {
+    "id": 11,
+    "date_gmt": "2025-01-03T12:00:00",
+    "modified_gmt": "2025-01-03T14:00:00",
+    "slug": "api-post",
+    "status": "publish",
+    "type": "post",
+    "link": "https://example.com/api-post",
+    "title": { "rendered": "API Post" },
+    "content": {
+      "rendered": "<!-- wp:paragraph --><p>API content with <iframe src=\"https://www.youtube.com/embed/abc\"></iframe></p><!-- /wp:paragraph -->"
+    },
+    "excerpt": { "rendered": "API excerpt" },
+    "author": 7,
+    "featured_media": 91,
+    "categories": [31],
+    "tags": [41]
+  }
+]
+

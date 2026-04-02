@@ -1,0 +1,19 @@
+{
+  "name": "@wp2emdash/migration-cli",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "wp2emdash": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@wp2emdash/migration-core": "workspace:*",
+    "@wp2emdash/shared-types": "workspace:*",
+    "commander": "^14.0.1"
+  }
+}

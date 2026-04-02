@@ -1,0 +1,19 @@
+[
+  {
+    "id": 12,
+    "date_gmt": "2025-01-04T12:00:00",
+    "modified_gmt": "2025-01-04T13:00:00",
+    "slug": "api-page",
+    "status": "publish",
+    "type": "page",
+    "link": "https://example.com/api-page",
+    "title": { "rendered": "API Page" },
+    "content": {
+      "rendered": "<!-- wp:heading {\"level\":3} --><h3>API Page</h3><!-- /wp:heading -->"
+    },
+    "excerpt": { "rendered": "" },
+    "author": 7,
+    "featured_media": 0
+  }
+]
+

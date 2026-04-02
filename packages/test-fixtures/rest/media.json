@@ -1,0 +1,11 @@
+[
+  {
+    "id": 91,
+    "slug": "cover-image",
+    "title": { "rendered": "Cover Image" },
+    "source_url": "https://example.com/wp-content/uploads/2025/01/cover.jpg",
+    "mime_type": "image/jpeg",
+    "alt_text": "Cover alt"
+  }
+]
+

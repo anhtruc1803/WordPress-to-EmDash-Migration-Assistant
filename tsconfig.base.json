@@ -1,0 +1,32 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "useUnknownInCatchVariables": true,
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "composite": true,
+    "rootDir": ".",
+    "baseUrl": ".",
+    "paths": {
+      "@wp2emdash/shared-types": [
+        "packages/shared-types/src/index.ts"
+      ],
+      "@wp2emdash/migration-core": [
+        "packages/migration-core/src/index.ts"
+      ],
+      "@wp2emdash/test-fixtures": [
+        "packages/test-fixtures/src/index.ts"
+      ]
+    }
+  }
+}
+
