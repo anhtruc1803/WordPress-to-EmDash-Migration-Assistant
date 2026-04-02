@@ -99,7 +99,16 @@ export const wordpressSourceBundleSchema = z.object({
   terms: z.array(termSchema),
   media: z.array(mediaSchema),
   contentItems: z.array(wordpressContentItemSchema),
-  customPostTypes: z.array(z.string())
+  customPostTypes: z.array(z.string()),
+  sourceWarnings: z.array(
+    z.object({
+      id: z.string(),
+      severity: z.enum(["info", "warning", "error"]),
+      stage: z.string(),
+      message: z.string(),
+      reference: z.string().optional()
+    })
+  ).default([])
 });
 export type WordPressSourceBundle = z.infer<typeof wordpressSourceBundleSchema>;
 
@@ -280,6 +289,7 @@ export const importPlanEntrySchema = z.object({
   slug: z.string(),
   authorMapping: z.string().optional(),
   warningIds: z.array(z.string()),
+  findingIds: z.array(z.string()),
   status: z.enum(["ready", "manual-review", "blocked"])
 });
 export type ImportPlanEntry = z.infer<typeof importPlanEntrySchema>;
@@ -288,7 +298,10 @@ export const unresolvedItemSchema = z.object({
   itemId: z.string(),
   reason: z.string(),
   severity: findingSeveritySchema,
-  suggestedAction: z.string()
+  suggestedAction: z.string(),
+  warningIds: z.array(z.string()),
+  findingIds: z.array(z.string()),
+  details: z.array(z.string())
 });
 export type UnresolvedItem = z.infer<typeof unresolvedItemSchema>;
 

@@ -52,6 +52,7 @@ export interface RestApiPayload {
   tags: unknown[];
   media: unknown[];
   users: unknown[];
+  sourceWarnings?: WordPressSourceBundle["sourceWarnings"];
 }
 
 export function normalizeRestPayload(payload: RestApiPayload): WordPressSourceBundle {
@@ -155,7 +156,7 @@ export function normalizeRestPayload(payload: RestApiPayload): WordPressSourceBu
     terms,
     media,
     contentItems,
-    customPostTypes
+    customPostTypes,
+    sourceWarnings: payload.sourceWarnings ?? []
   };
 }
-

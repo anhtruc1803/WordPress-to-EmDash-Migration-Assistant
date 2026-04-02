@@ -189,7 +189,7 @@ export function parseWxr(content: string, location = "inline.wxr.xml"): WordPres
     terms,
     media,
     contentItems,
-    customPostTypes: [...customPostTypes].sort()
+    customPostTypes: [...customPostTypes].sort(),
+    sourceWarnings: []
   };
 }
-

@@ -60,9 +60,12 @@ Example:
 node packages/migration-cli/dist/index.js report --input ./artifacts/audit-result.json --output ./artifacts/reports/migration-report.md
 ```
 
+The `--output` value is treated as the exact target filename.
+
 ## Error Behavior
 
 - invalid I/O or network calls bubble up as command errors
+- invalid `--source` values are rejected before the workflow starts
 - CLI currently reports the message and exits with code `1`
 - there is no custom error-code taxonomy yet
 
@@ -70,4 +73,3 @@ node packages/migration-cli/dist/index.js report --input ./artifacts/audit-resul
 
 - `audit`, `dry-run`, and `import` all write the same artifact set
 - `report` only writes Markdown report output
-

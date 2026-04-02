@@ -23,6 +23,14 @@ The current planner turns normalized, audited, and transformed data into a concr
 - `unresolvedItems`
 - `assumptions`
 
+Traceability fields currently included:
+
+- `entries[*].warningIds`
+- `entries[*].findingIds`
+- `unresolvedItems[*].warningIds`
+- `unresolvedItems[*].findingIds`
+- `unresolvedItems[*].details`
+
 ## Entry Status Logic
 
 Each item is classified as:
@@ -69,4 +77,3 @@ To turn this into a real import layer, the next implementation likely needs:
 - entry create/update behavior
 - idempotency strategy
 - integration tests against a real EmDash environment
-

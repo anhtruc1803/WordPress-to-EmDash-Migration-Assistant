@@ -64,6 +64,17 @@ export function auditBundle(bundle: WordPressSourceBundle): AuditResult {
   incrementCount(counts, "tags", bundle.terms.filter((term) => term.taxonomy === "post_tag").length);
   incrementCount(counts, "customPostTypes", bundle.customPostTypes.length);
   incrementCount(counts, "totalContentItems", bundle.contentItems.length);
+  incrementCount(counts, "sourceWarnings", bundle.sourceWarnings.length);
+
+  bundle.sourceWarnings.forEach((warning, index) => {
+    findings.push({
+      id: warning.id || createIssueId("source-warning", "global", index),
+      severity: warning.severity,
+      title: `Source warning during ${warning.stage}`,
+      detail: warning.reference ? `${warning.message} (${warning.reference})` : warning.message,
+      category: "source-ingestion"
+    });
+  });
 
   for (const item of bundle.contentItems) {
     incrementCount(counts, `postType:${item.postType}`);

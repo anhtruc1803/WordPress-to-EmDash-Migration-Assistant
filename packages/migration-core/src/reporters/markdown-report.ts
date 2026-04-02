@@ -29,8 +29,14 @@ export function renderMigrationReport(
     : [["None", "0"]];
 
   const unresolvedRows = plan.unresolvedItems.length > 0
-    ? plan.unresolvedItems.map((item) => [item.itemId, item.severity, item.reason, item.suggestedAction])
-    : [["None", "-", "No unresolved items", "-"]];
+    ? plan.unresolvedItems.map((item) => [
+        item.itemId,
+        item.severity,
+        item.reason,
+        item.suggestedAction,
+        item.details.join(" | ")
+      ])
+    : [["None", "-", "No unresolved items", "-", "-"]];
 
   return [
     `# Migration Report: ${bundle.site.title}`,
@@ -42,6 +48,7 @@ export function renderMigrationReport(
     `- Recommendation: **${audit.recommendation}**`,
     `- Content items: **${bundle.contentItems.length}**`,
     `- Media assets: **${bundle.media.length}**`,
+    `- Source warnings: **${bundle.sourceWarnings.length}**`,
     `- Transform warnings: **${transform.warnings.length}**`,
     `- Unresolved import items: **${plan.unresolvedItems.length}**`,
     "",
@@ -70,9 +77,19 @@ export function renderMigrationReport(
         : ["- No strong builder or plugin signatures detected."]
     ),
     "",
+    "## Source Warnings",
+    "",
+    ...(
+      bundle.sourceWarnings.length > 0
+        ? bundle.sourceWarnings.map(
+            (warning) => `- [${warning.severity}] ${warning.stage}: ${warning.reference ? `${warning.message} (${warning.reference})` : warning.message}`
+          )
+        : ["- No source ingestion warnings recorded."]
+    ),
+    "",
     "## Unresolved Items",
     "",
-    renderTable(["Item ID", "Severity", "Reason", "Suggested Action"], unresolvedRows),
+    renderTable(["Item ID", "Severity", "Reason", "Suggested Action", "Details"], unresolvedRows),
     "",
     "## Assumptions",
     "",
@@ -98,4 +115,3 @@ export function renderAuditOnlyReport(audit: AuditResult): string {
     ""
   ].join("\n");
 }
-

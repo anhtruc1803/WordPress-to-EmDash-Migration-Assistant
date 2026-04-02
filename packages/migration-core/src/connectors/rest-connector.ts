@@ -64,6 +64,7 @@ export async function loadRestSource(source: string): Promise<WordPressSourceBun
   const types = (typesData ?? {}) as RestApiPayload["types"];
 
   const customPostCollections: Record<string, unknown[]> = {};
+  const sourceWarnings: WordPressSourceBundle["sourceWarnings"] = [];
   const reservedRestBases = new Set(["posts", "pages", "media", "categories", "tags", "users"]);
 
   for (const [typeKey, typeDefinition] of Object.entries(types)) {
@@ -74,8 +75,17 @@ export async function loadRestSource(source: string): Promise<WordPressSourceBun
 
     try {
       customPostCollections[typeKey] = await fetchCollection(baseUrl, `wp/v2/${restBase}`);
-    } catch {
+    } catch (error) {
       customPostCollections[typeKey] = [];
+      sourceWarnings.push({
+        id: `source-warning:${typeKey}`,
+        severity: "warning",
+        stage: "custom-post-type-fetch",
+        message: error instanceof Error
+          ? `Failed to fetch WordPress collection for custom post type "${typeKey}": ${error.message}`
+          : `Failed to fetch WordPress collection for custom post type "${typeKey}".`,
+        reference: `wp/v2/${restBase}`
+      });
     }
   }
 
@@ -88,9 +98,9 @@ export async function loadRestSource(source: string): Promise<WordPressSourceBun
     categories: await fetchCollection(baseUrl, "wp/v2/categories"),
     tags: await fetchCollection(baseUrl, "wp/v2/tags"),
     media: await fetchCollection(baseUrl, "wp/v2/media"),
-    users: await fetchCollection(baseUrl, "wp/v2/users")
+    users: await fetchCollection(baseUrl, "wp/v2/users"),
+    sourceWarnings
   };
 
   return normalizeRestPayload(payload);
 }
-

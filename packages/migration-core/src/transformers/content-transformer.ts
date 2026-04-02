@@ -44,73 +44,6 @@ function htmlFallbackNode(html: string, reason: string): StructuredNode {
   };
 }
 
-function transformHtmlFragment(html: string): StructuredNode | undefined {
-  if (/<img/i.test(html)) {
-    const image = extractImageSources(html)[0];
-    if (image) {
-      return {
-        type: "image",
-        url: image.url,
-        alt: image.alt
-      };
-    }
-  }
-
-  if (/<h[1-6]/i.test(html)) {
-    return {
-      type: "heading",
-      level: firstHeadingLevel(html) ?? 2,
-      text: sanitizeText(html)
-    };
-  }
-
-  if (/<(ul|ol)/i.test(html)) {
-    return {
-      type: "list",
-      ordered: /<ol/i.test(html),
-      items: extractListItems(html)
-    };
-  }
-
-  if (/<blockquote/i.test(html)) {
-    return {
-      type: "quote",
-      text: sanitizeText(html),
-      citation: extractAttribute(html, "cite")
-    };
-  }
-
-  if (/<table/i.test(html)) {
-    return {
-      type: "table",
-      rows: extractTableRows(html)
-    };
-  }
-
-  if (/<hr/i.test(html)) {
-    return {
-      type: "separator"
-    };
-  }
-
-  if (/<pre/i.test(html) || /<code/i.test(html)) {
-    return {
-      type: "code",
-      code: stripHtml(html)
-    };
-  }
-
-  const text = sanitizeText(html);
-  if (text.length > 0) {
-    return {
-      type: "paragraph",
-      text
-    };
-  }
-
-  return undefined;
-}
-
 function transformBlock(block: GutenbergBlock): { nodes: StructuredNode[]; assetReferences: string[]; warningReason?: string } {
   switch (block.normalizedName) {
     case "core/paragraph": {
@@ -234,14 +167,6 @@ function transformBlock(block: GutenbergBlock): { nodes: StructuredNode[]; asset
       };
     }
     case "core/html": {
-      const htmlNode = transformHtmlFragment(block.innerHTML);
-      if (htmlNode) {
-        return {
-          nodes: [htmlNode],
-          assetReferences: htmlNode.type === "image" ? [htmlNode.url] : []
-        };
-      }
-
       return {
         nodes: [htmlFallbackNode(block.innerHTML, "Raw HTML requires manual review")],
         assetReferences: [],
@@ -275,11 +200,11 @@ function transformItem(item: WordPressContentItem): {
     const result = transformBlock(block);
     result.nodes.forEach((node) => {
       nodes.push(node);
-      if (node.type === "unsupported-block") {
+      if (node.type === "unsupported-block" || node.type === "html-fallback") {
         unsupportedNodes.push({
           itemId: item.id,
-          blockName: node.blockName,
-          rawPayload: node.rawPayload
+          blockName: node.type === "unsupported-block" ? node.blockName : block.normalizedName,
+          rawPayload: node.type === "unsupported-block" ? node.rawPayload : node.html
         });
       }
 
@@ -343,7 +268,7 @@ function transformItem(item: WordPressContentItem): {
       nodes,
       assetReferences: [...assetReferences].sort(),
       sourceBlockNames: blocks.map((block) => block.normalizedName),
-      unsupportedNodeCount: nodes.filter((node) => node.type === "unsupported-block").length,
+      unsupportedNodeCount: nodes.filter((node) => node.type === "unsupported-block" || node.type === "html-fallback").length,
       fallbackNodeCount: nodes.filter((node) => node.type === "unsupported-block" || node.type === "html-fallback" || node.type === "shortcode-fallback").length
     },
     warnings,
@@ -368,4 +293,3 @@ export function transformBundle(bundle: WordPressSourceBundle): TransformResult 
     embeddedAssetReferences: [...allAssetReferences].sort()
   };
 }
-

@@ -44,6 +44,7 @@ Normalization outputs:
 - media
 - content items
 - custom post types
+- source warnings for partial ingestion failures
 
 Handled by:
 
@@ -101,6 +102,7 @@ It produces:
 - rewrite suggestions
 - unresolved items
 - assumptions
+- warning and finding traceability for unresolved items
 
 Handled by:
 
@@ -123,4 +125,3 @@ Handled by:
 
 - [artifact-writer.ts](D:/Project/WordPress%20to%20EmDash%20Migration%20Assistant/packages/migration-core/src/reporters/artifact-writer.ts)
 - [markdown-report.ts](D:/Project/WordPress%20to%20EmDash%20Migration%20Assistant/packages/migration-core/src/reporters/markdown-report.ts)
-

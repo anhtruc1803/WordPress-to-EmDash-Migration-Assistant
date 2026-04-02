@@ -19,12 +19,15 @@ function escapeCsv(value: string): string {
 }
 
 function manualFixCsv(plan: ImportPlan): string {
-  const header = "itemId,severity,reason,suggestedAction";
+  const header = "itemId,severity,reason,suggestedAction,warningIds,findingIds,details";
   const rows = plan.unresolvedItems.map((item) => [
     item.itemId,
     item.severity,
     item.reason,
-    item.suggestedAction
+    item.suggestedAction,
+    item.warningIds.join("|"),
+    item.findingIds.join("|"),
+    item.details.join(" | ")
   ].map((value) => escapeCsv(value)).join(","));
 
   return `${[header, ...rows].join("\n")}\n`;
@@ -45,6 +48,8 @@ export async function writeExecutionArtifacts(
 
   await writeJsonFile(summaryPath, {
     source: execution.bundle.source,
+    sourceWarningCount: execution.bundle.sourceWarnings.length,
+    sourceWarnings: execution.bundle.sourceWarnings,
     counts: execution.audit.counts,
     difficulty: execution.audit.difficulty,
     recommendation: execution.audit.recommendation,
@@ -72,10 +77,9 @@ export async function writeExecutionArtifacts(
 }
 
 export async function writeReportFromAuditFile(
-  outputDirectory: string,
+  reportPath: string,
   audit: AuditResult
 ): Promise<string> {
-  const reportPath = resolve(outputDirectory, "migration-report.md");
   await writeTextFile(reportPath, renderAuditOnlyReport(audit));
   return reportPath;
 }

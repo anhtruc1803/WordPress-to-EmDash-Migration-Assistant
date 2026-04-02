@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { readFile } from "node:fs/promises";
-import { dirname, resolve } from "node:path";
+import { resolve } from "node:path";
 
 import { Command } from "commander";
 
@@ -13,6 +13,7 @@ import {
   runWorkflowAndWriteArtifacts,
   writeReportFromAuditFile
 } from "@wp2emdash/migration-core";
+import { parseSourceKind, type CliSourceKind } from "./source-kind.js";
 
 function resolveOutputDir(outputDirectory: string | undefined): string {
   return resolve(process.cwd(), outputDirectory ?? "artifacts");
@@ -27,7 +28,7 @@ function reportArtifacts(command: string, paths: Record<string, string>): void {
 
 function configureSourceOptions(command: Command): Command {
   return command
-    .requiredOption("--source <kind>", "Source type: wxr or api")
+    .requiredOption("--source <kind>", "Source type: wxr or api", parseSourceKind)
     .option("--output <dir>", "Output directory for generated artifacts", "artifacts");
 }
 
@@ -45,7 +46,7 @@ configureSourceOptions(
     .argument("<location>", "Path to a WXR export or a WordPress REST API root")
     .description("Audit a WordPress source and generate migration planning artifacts.")
 ).action(async (location, options) => {
-  const sourceKind = options.source as "wxr" | "api";
+  const sourceKind = options.source as CliSourceKind;
   const outputDirectory = resolveOutputDir(options.output);
   const execution = await runWorkflowAndWriteArtifacts({
     sourceKind,
@@ -62,7 +63,7 @@ configureSourceOptions(
     .argument("<location>", "Path to a WXR export or a WordPress REST API root")
     .description("Preview a migration without performing a live import.")
 ).action(async (location, options) => {
-  const sourceKind = options.source as "wxr" | "api";
+  const sourceKind = options.source as CliSourceKind;
   const outputDirectory = resolveOutputDir(options.output);
   const execution = await runWorkflowAndWriteArtifacts({
     sourceKind,
@@ -80,7 +81,7 @@ configureSourceOptions(
     .requiredOption("--target <url>", "EmDash target URL for validation and import planning")
     .description("Generate an import plan for an EmDash target. Live import is intentionally adapter-gated in the MVP.")
 ).action(async (location, options) => {
-  const sourceKind = options.source as "wxr" | "api";
+  const sourceKind = options.source as CliSourceKind;
   const outputDirectory = resolveOutputDir(options.output);
   const execution = await runWorkflowAndWriteArtifacts({
     sourceKind,
@@ -102,7 +103,7 @@ program
     const outputPath = resolve(process.cwd(), options.output as string);
     const rawAudit = JSON.parse(await readFile(inputPath, "utf8")) as AuditResult;
     const audit = auditResultSchema.parse(rawAudit);
-    const reportPath = await writeReportFromAuditFile(dirname(outputPath), audit);
+    const reportPath = await writeReportFromAuditFile(outputPath, audit);
 
     reportArtifacts("Report", {
       reportPath

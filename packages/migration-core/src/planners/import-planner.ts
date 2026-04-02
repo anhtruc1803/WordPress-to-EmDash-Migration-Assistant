@@ -21,10 +21,15 @@ export function createImportPlan(
   options: ImportPlannerOptions = {}
 ): ImportPlan {
   const warningIdsByItem = new Map<string, string[]>();
+  const warningMessagesByItem = new Map<string, string[]>();
   for (const warning of transform.warnings) {
     const itemWarnings = warningIdsByItem.get(warning.itemId) ?? [];
     itemWarnings.push(warning.id);
     warningIdsByItem.set(warning.itemId, itemWarnings);
+
+    const warningMessages = warningMessagesByItem.get(warning.itemId) ?? [];
+    warningMessages.push(warning.message);
+    warningMessagesByItem.set(warning.itemId, warningMessages);
   }
 
   const collections = new Map<string, { contentType: string; count: number }>();
@@ -34,7 +39,10 @@ export function createImportPlan(
     const targetCollection = mapTargetCollection(item);
     const document = transform.items.find((entry) => entry.itemId === item.id);
     const warningIds = warningIdsByItem.get(item.id) ?? [];
+    const warningMessages = warningMessagesByItem.get(item.id) ?? [];
     const findings = audit.findings.filter((finding) => finding.itemId === item.id);
+    const findingIds = findings.map((finding) => finding.id);
+    const findingMessages = findings.map((finding) => `${finding.title}: ${finding.detail}`);
     const hasErrors = findings.some((finding) => finding.severity === "error");
     const hasWarnings = warningIds.length > 0 || findings.some((finding) => finding.severity === "warning");
 
@@ -57,7 +65,10 @@ export function createImportPlan(
         severity: hasErrors ? "error" : "warning",
         suggestedAction: hasErrors
           ? "Review the raw fallback payload and rebuild the affected section in EmDash."
-          : "Confirm transformed content, then replace shortcode or raw HTML fallbacks."
+          : "Confirm transformed content, then replace shortcode or raw HTML fallbacks.",
+        warningIds,
+        findingIds,
+        details: [...findingMessages, ...warningMessages]
       });
     }
 
@@ -69,6 +80,7 @@ export function createImportPlan(
       slug: item.slug,
       authorMapping: item.authorId,
       warningIds,
+      findingIds,
       status: hasErrors
         ? "blocked"
         : hasWarnings || (document?.fallbackNodeCount ?? 0) > 0
@@ -98,4 +110,3 @@ export function createImportPlan(
     ]
   };
 }
-

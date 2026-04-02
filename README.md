@@ -86,6 +86,12 @@ Each full workflow writes:
 - `migration-report.md`
 - `manual-fixes.csv`
 
+Current artifact details worth knowing:
+
+- `summary.json` includes connector-level `sourceWarnings`
+- `import-plan.json` includes `warningIds` and `findingIds` for item traceability
+- `manual-fixes.csv` includes IDs and detailed issue text, not just a generic status
+
 Example summary snapshot from the checked-in smoke test:
 
 ```json
@@ -111,4 +117,3 @@ Example summary snapshot from the checked-in smoke test:
 - [AUDIT_SUMMARY.md](D:/Project/WordPress%20to%20EmDash%20Migration%20Assistant/AUDIT_SUMMARY.md)
 - [docs/architecture/system-overview.md](D:/Project/WordPress%20to%20EmDash%20Migration%20Assistant/docs/architecture/system-overview.md)
 - [docs/guides/local-setup.md](D:/Project/WordPress%20to%20EmDash%20Migration%20Assistant/docs/guides/local-setup.md)
-
