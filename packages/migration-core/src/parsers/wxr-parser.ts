@@ -152,6 +152,19 @@ export function parseWxr(content: string, location = "inline.wxr.xml"): WordPres
       customPostTypes.add(postType);
     }
 
+    // Extract _thumbnail_id from wp:postmeta entries
+    let featuredMediaId: string | undefined;
+    for (const metaNode of asArray(item["wp:postmeta"])) {
+      const meta = metaNode as Record<string, unknown>;
+      if (stringValue(meta["wp:meta_key"]) === "_thumbnail_id") {
+        const thumbnailId = stringValue(meta["wp:meta_value"]);
+        if (thumbnailId && thumbnailId !== "0") {
+          featuredMediaId = thumbnailId;
+        }
+        break;
+      }
+    }
+
     contentItems.push({
       id: itemId,
       kind,
@@ -167,7 +180,7 @@ export function parseWxr(content: string, location = "inline.wxr.xml"): WordPres
       parentId: stringValue(item["wp:post_parent"]) && stringValue(item["wp:post_parent"]) !== "0"
         ? stringValue(item["wp:post_parent"])
         : undefined,
-      featuredMediaId: undefined,
+      featuredMediaId,
       terms: itemTerms,
       raw: item
     });

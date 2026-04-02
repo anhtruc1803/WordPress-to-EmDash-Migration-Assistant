@@ -29,7 +29,8 @@ function reportArtifacts(command: string, paths: Record<string, string>): void {
 function configureSourceOptions(command: Command): Command {
   return command
     .requiredOption("--source <kind>", "Source type: wxr or api", parseSourceKind)
-    .option("--output <dir>", "Output directory for generated artifacts", "artifacts");
+    .option("--output <dir>", "Output directory for generated artifacts", "artifacts")
+    .option("--auth-token <token>", "Bearer token or Application Password for authenticated WordPress REST API access (api source only)");
 }
 
 const program = new Command();
@@ -51,7 +52,8 @@ configureSourceOptions(
   const execution = await runWorkflowAndWriteArtifacts({
     sourceKind,
     location,
-    outputDirectory
+    outputDirectory,
+    authToken: options.authToken as string | undefined
   });
 
   reportArtifacts("Audit", execution.artifacts);
@@ -59,38 +61,32 @@ configureSourceOptions(
 
 configureSourceOptions(
   program
-    .command("dry-run")
+    .command("plan")
     .argument("<location>", "Path to a WXR export or a WordPress REST API root")
-    .description("Preview a migration without performing a live import.")
+    .requiredOption("--target <url>", "EmDash target URL for reachability check and import planning")
+    .description(
+      "Generate a migration plan for an EmDash target.\n\n" +
+      "  ⚠  PLAN-ONLY: This command does NOT write any data to EmDash.\n" +
+      "     It produces import-plan.json and related artifacts for human review.\n" +
+      "     Live import requires a real EmDash adapter (not yet implemented)."
+    )
 ).action(async (location, options) => {
-  const sourceKind = options.source as CliSourceKind;
-  const outputDirectory = resolveOutputDir(options.output);
-  const execution = await runWorkflowAndWriteArtifacts({
-    sourceKind,
-    location,
-    outputDirectory
-  });
+  console.warn(
+    "\n⚠  PLAN-ONLY MODE: No data will be written to EmDash.\n" +
+    "   This command generates a migration plan for review only.\n"
+  );
 
-  reportArtifacts("Dry run", execution.artifacts);
-});
-
-configureSourceOptions(
-  program
-    .command("import")
-    .argument("<location>", "Path to a WXR export or a WordPress REST API root")
-    .requiredOption("--target <url>", "EmDash target URL for validation and import planning")
-    .description("Generate an import plan for an EmDash target. Live import is intentionally adapter-gated in the MVP.")
-).action(async (location, options) => {
   const sourceKind = options.source as CliSourceKind;
   const outputDirectory = resolveOutputDir(options.output);
   const execution = await runWorkflowAndWriteArtifacts({
     sourceKind,
     location,
     outputDirectory,
-    targetUrl: options.target as string
+    targetUrl: options.target as string,
+    authToken: options.authToken as string | undefined
   });
 
-  reportArtifacts("Import planning", execution.artifacts);
+  reportArtifacts("Migration plan", execution.artifacts);
 });
 
 program

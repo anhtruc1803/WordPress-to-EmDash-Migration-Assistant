@@ -32,9 +32,23 @@ Tradeoff:
 
 Both source connectors feed the same `WordPressSourceBundle` model before audit or transform work starts. This avoids connector-specific logic leaking into every later module.
 
+**Important — normalization fidelity gaps (as of current implementation):**
+
+The two connectors do NOT produce fully equivalent bundles:
+
+| Field | WXR connector | REST connector |
+|---|---|---|
+| `excerpt` | Extracted from `excerpt:encoded` | Extracted from `excerpt.rendered` |
+| `featuredMediaId` | Extracted from `_thumbnail_id` in `wp:postmeta` | Extracted from `featured_media` field |
+| `parentId` | Extracted from `wp:post_parent` | Extracted from `parent` field |
+| `terms` | Resolved via slug/taxonomy cross-reference | Resolved via numeric IDs |
+
+Both paths are now implemented. Before claiming full equivalence, write an integration test that compares bundle shapes from both connectors against the same WordPress content.
+
 Tradeoff:
 
 - normalization quality becomes a critical dependency for everything downstream
+- the WXR parser depends on `wp:postmeta` being present in the export; older or custom exporters may omit it
 
 ## Decision 4: Structured Intermediate Representation Over HTML Reuse
 
@@ -57,9 +71,12 @@ Tradeoff:
 
 The `PlanOnlyEmDashAdapter` validates a target URL with a `HEAD` request and records an assumption, but does not write content. This is an intentional honesty boundary until a stable EmDash import API is known.
 
+**The CLI command is now named `plan` (was `import` in earlier versions).** The rename makes the plan-only scope unambiguous to users.
+
 Tradeoff:
 
-- `import` is currently an import-planning command, not a true import executor
+- `plan` generates `import-plan.json` for human review, not a true import executor
+- live import requires implementing a real `EmDashTargetAdapter` once the EmDash import contract is defined
 
 ## Decision 7: Small Heuristics, Not Large Rules Engines
 

@@ -6,7 +6,44 @@ import type {
   WordPressTerm
 } from "@wp2emdash/shared-types";
 
-function normalizeStatus(value: string | undefined): WordPressContentItem["status"] {
+// ---------------------------------------------------------------------------
+// Safe runtime coercion helpers — replaces unsafe `as T` casts.
+// These treat unexpected shapes (wrong type, null, undefined) as absent rather
+// than crashing or silently producing wrong data.
+// ---------------------------------------------------------------------------
+
+function safeString(value: unknown): string {
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  return "";
+}
+
+function safeStringId(value: unknown): string {
+  if (typeof value === "number") return String(value);
+  if (typeof value === "string" && value.length > 0) return value;
+  return "";
+}
+
+/** Safely extract ids from a field that should be number[] but may be anything. */
+function safeNumberArray(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((item): item is number => typeof item === "number").map(String);
+}
+
+function safePositiveNumber(value: unknown): number | undefined {
+  const n = Number(value);
+  return Number.isFinite(n) && n > 0 ? n : undefined;
+}
+
+function safeRendered(value: unknown): string {
+  if (value === null || value === undefined) return "";
+  if (typeof value === "object" && "rendered" in (value as object)) {
+    return safeString((value as Record<string, unknown>).rendered);
+  }
+  return "";
+}
+
+function normalizeStatus(value: unknown): WordPressContentItem["status"] {
   switch (value) {
     case "draft":
     case "publish":
@@ -22,18 +59,9 @@ function normalizeStatus(value: string | undefined): WordPressContentItem["statu
 }
 
 function contentKindFromType(postType: string): WordPressContentItem["kind"] {
-  if (postType === "post") {
-    return "post";
-  }
-
-  if (postType === "page") {
-    return "page";
-  }
-
-  if (postType === "attachment") {
-    return "attachment";
-  }
-
+  if (postType === "post") return "post";
+  if (postType === "page") return "page";
+  if (postType === "attachment") return "attachment";
   return "custom";
 }
 
@@ -58,38 +86,39 @@ export interface RestApiPayload {
 export function normalizeRestPayload(payload: RestApiPayload): WordPressSourceBundle {
   const authors: WordPressAuthor[] = payload.users.map((userNode) => {
     const user = userNode as Record<string, unknown>;
+    const id = safeStringId(user.id);
     return {
-      id: String(user.id),
-      login: String(user.slug ?? user.name ?? user.id),
-      displayName: String(user.name ?? user.slug ?? user.id)
+      id: id || "0",
+      login: safeString(user.slug ?? user.name ?? user.id) || id,
+      displayName: safeString(user.name ?? user.slug ?? user.id) || id
     };
   });
 
   const terms: WordPressTerm[] = [
     ...payload.categories.map((termNode) => {
       const category = termNode as Record<string, unknown>;
+      const description = safeString(category.description);
+      const parentNum = safePositiveNumber(category.parent);
       return {
-        id: String(category.id),
-        taxonomy: String(category.taxonomy ?? "category"),
-        slug: String(category.slug),
-        name: String(category.name),
-        description: typeof category.description === "string" && category.description.length > 0
-          ? category.description
-          : undefined,
-        parentId: category.parent && Number(category.parent) > 0 ? String(category.parent) : undefined
+        id: safeStringId(category.id),
+        taxonomy: safeString(category.taxonomy) || "category",
+        slug: safeString(category.slug),
+        name: safeString(category.name),
+        description: description.length > 0 ? description : undefined,
+        parentId: parentNum !== undefined ? String(parentNum) : undefined
       };
     }),
     ...payload.tags.map((termNode) => {
       const tag = termNode as Record<string, unknown>;
+      const description = safeString(tag.description);
+      const parentNum = safePositiveNumber(tag.parent);
       return {
-        id: String(tag.id),
-        taxonomy: String(tag.taxonomy ?? "post_tag"),
-        slug: String(tag.slug),
-        name: String(tag.name),
-        description: typeof tag.description === "string" && tag.description.length > 0
-          ? tag.description
-          : undefined,
-        parentId: tag.parent && Number(tag.parent) > 0 ? String(tag.parent) : undefined
+        id: safeStringId(tag.id),
+        taxonomy: safeString(tag.taxonomy) || "post_tag",
+        slug: safeString(tag.slug),
+        name: safeString(tag.name),
+        description: description.length > 0 ? description : undefined,
+        parentId: parentNum !== undefined ? String(parentNum) : undefined
       };
     })
   ];
@@ -103,28 +132,31 @@ export function normalizeRestPayload(payload: RestApiPayload): WordPressSourceBu
     ...customPostTypes.flatMap((type) => payload.customPostCollections[type] ?? [])
   ].map((entryNode) => {
     const entry = entryNode as Record<string, unknown>;
-    const postType = String(entry.type ?? "post");
+    const postType = safeString(entry.type) || "post";
+
+    // Safely extract numeric arrays — categories and tags may be number[], string[], or missing
     const termIdsForEntry = [
-      ...((entry.categories as number[] | undefined) ?? []).map(String),
-      ...((entry.tags as number[] | undefined) ?? []).map(String)
+      ...safeNumberArray(entry.categories),
+      ...safeNumberArray(entry.tags)
     ].filter((termId) => termIds.has(termId));
 
+    const parentNum = safePositiveNumber(entry.parent);
+    const featuredMediaNum = safePositiveNumber(entry.featured_media);
+
     return {
-      id: String(entry.id),
+      id: safeStringId(entry.id),
       kind: contentKindFromType(postType),
       postType,
-      slug: String(entry.slug ?? entry.id),
-      title: String((entry.title as { rendered?: string } | undefined)?.rendered ?? ""),
-      excerpt: String((entry.excerpt as { rendered?: string } | undefined)?.rendered ?? "") || undefined,
-      content: String((entry.content as { rendered?: string } | undefined)?.rendered ?? ""),
-      status: normalizeStatus(typeof entry.status === "string" ? entry.status : undefined),
-      authorId: entry.author !== undefined ? String(entry.author) : undefined,
+      slug: safeString(entry.slug ?? entry.id),
+      title: safeRendered(entry.title),
+      excerpt: safeRendered(entry.excerpt) || undefined,
+      content: safeRendered(entry.content),
+      status: normalizeStatus(entry.status),
+      authorId: entry.author !== undefined ? safeStringId(entry.author) || undefined : undefined,
       publishedAt: typeof entry.date_gmt === "string" ? entry.date_gmt : undefined,
       modifiedAt: typeof entry.modified_gmt === "string" ? entry.modified_gmt : undefined,
-      parentId: entry.parent && Number(entry.parent) > 0 ? String(entry.parent) : undefined,
-      featuredMediaId: entry.featured_media && Number(entry.featured_media) > 0
-        ? String(entry.featured_media)
-        : undefined,
+      parentId: parentNum !== undefined ? String(parentNum) : undefined,
+      featuredMediaId: featuredMediaNum !== undefined ? String(featuredMediaNum) : undefined,
       terms: termIdsForEntry,
       raw: entry
     };
@@ -132,13 +164,14 @@ export function normalizeRestPayload(payload: RestApiPayload): WordPressSourceBu
 
   const media: WordPressMedia[] = payload.media.map((mediaNode) => {
     const item = mediaNode as Record<string, unknown>;
+    const altText = safeString(item.alt_text);
     return {
-      id: String(item.id),
-      slug: String(item.slug ?? item.id),
-      title: String((item.title as { rendered?: string } | undefined)?.rendered ?? item.slug ?? item.id),
-      url: String(item.source_url ?? ""),
+      id: safeStringId(item.id),
+      slug: safeString(item.slug ?? item.id),
+      title: safeRendered(item.title) || safeString(item.slug ?? item.id),
+      url: safeString(item.source_url),
       mimeType: typeof item.mime_type === "string" ? item.mime_type : undefined,
-      altText: typeof item.alt_text === "string" && item.alt_text.length > 0 ? item.alt_text : undefined
+      altText: altText.length > 0 ? altText : undefined
     };
   });
 

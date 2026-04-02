@@ -20,6 +20,23 @@ import {
 } from "../utils/html.js";
 import { createIssueId } from "../utils/ids.js";
 
+/**
+ * Depth-first flatten of a Gutenberg block tree.
+ * Container blocks (group, columns, cover, etc.) appear before their children
+ * so the transformer sees them and emits an unsupported-block node, then
+ * continues with the children as top-level structured nodes.
+ */
+function flattenBlocks(blocks: GutenbergBlock[]): GutenbergBlock[] {
+  const result: GutenbergBlock[] = [];
+  for (const block of blocks) {
+    result.push(block);
+    if (block.innerBlocks.length > 0) {
+      result.push(...flattenBlocks(block.innerBlocks));
+    }
+  }
+  return result;
+}
+
 function shortcodeNode(shortcode: string): StructuredNode {
   return {
     type: "shortcode-fallback",
@@ -166,6 +183,60 @@ function transformBlock(block: GutenbergBlock): { nodes: StructuredNode[]; asset
         assetReferences: []
       };
     }
+    case "core/pullquote": {
+      // Pullquote is semantically equivalent to a block quote — map to quote node
+      return {
+        nodes: [{
+          type: "quote",
+          text: sanitizeText(block.innerHTML),
+          citation: extractAttribute(block.innerHTML, "cite")
+        }],
+        assetReferences: []
+      };
+    }
+    case "core/verse":
+    case "core/preformatted": {
+      // Both blocks preserve whitespace; strip HTML tags only
+      return {
+        nodes: [{
+          type: "code",
+          code: stripHtml(block.innerHTML)
+        }],
+        assetReferences: []
+      };
+    }
+    case "core/spacer": {
+      return {
+        nodes: [{ type: "separator" }],
+        assetReferences: []
+      };
+    }
+    case "core/button": {
+      // Render button as a paragraph — captures visible link text for human review
+      return {
+        nodes: [{
+          type: "paragraph",
+          text: sanitizeText(block.innerHTML)
+        }],
+        assetReferences: []
+      };
+    }
+    case "core/buttons": {
+      // Container only — children are flattened and transformed individually.
+      // Emitting html-fallback here is an intentional exception to the clean-node contract:
+      // nearly every post has a CTA, so marking the container unsupported would inflate scores
+      // and obscure real migration blockers.
+      return {
+        nodes: [htmlFallbackNode(block.raw, "Buttons container: review child button links")],
+        assetReferences: [],
+        warningReason: "Buttons container requires manual link review"
+      };
+    }
+    case "core/list-item": {
+      // list-item is always a child of core/list; its content is already captured by the
+      // parent's extractListItems(innerHTML) pass. Return no nodes to avoid duplication.
+      return { nodes: [], assetReferences: [] };
+    }
     case "core/html": {
       return {
         nodes: [htmlFallbackNode(block.innerHTML, "Raw HTML requires manual review")],
@@ -192,7 +263,11 @@ function transformItem(item: WordPressContentItem): {
   const warnings: TransformWarning[] = [];
   const unsupportedNodes: TransformResult["unsupportedNodes"] = [];
   const fallbackBlocks: TransformResult["fallbackBlocks"] = [];
-  const blocks = parseGutenbergBlocks(item.content);
+  const topBlocks = parseGutenbergBlocks(item.content);
+  // Flatten nested innerBlocks so every block — regardless of depth — is transformed.
+  // Container blocks (columns, group, cover, etc.) are unsupported by the MVP transformer
+  // and will emit an unsupported-block node; their children are still processed.
+  const blocks = flattenBlocks(topBlocks);
   const nodes: StructuredNode[] = [];
   const assetReferences = new Set<string>();
 
@@ -243,19 +318,20 @@ function transformItem(item: WordPressContentItem): {
   });
 
   detectShortcodes(item.content).forEach((shortcode, index) => {
-    nodes.push(shortcodeNode(shortcode));
+    // Use the full raw tag (including attributes) so humans can reconstruct the intent
+    nodes.push(shortcodeNode(shortcode.raw));
     fallbackBlocks.push({
       itemId: item.id,
       type: "shortcode-fallback",
-      payload: shortcode
+      payload: shortcode.raw
     });
     warnings.push({
       id: createIssueId("shortcode-warning", item.id, index),
       itemId: item.id,
       severity: "warning",
-      message: `Shortcode [${shortcode}] preserved as manual-fix fallback`,
+      message: `Shortcode ${shortcode.raw} preserved as manual-fix fallback`,
       sourceType: "shortcode",
-      rawValue: shortcode
+      rawValue: shortcode.raw
     });
   });
 
@@ -267,7 +343,7 @@ function transformItem(item: WordPressContentItem): {
       postType: item.postType,
       nodes,
       assetReferences: [...assetReferences].sort(),
-      sourceBlockNames: blocks.map((block) => block.normalizedName),
+      sourceBlockNames: [...new Set(blocks.map((block) => block.normalizedName))],
       unsupportedNodeCount: nodes.filter((node) => node.type === "unsupported-block" || node.type === "html-fallback").length,
       fallbackNodeCount: nodes.filter((node) => node.type === "unsupported-block" || node.type === "html-fallback" || node.type === "shortcode-fallback").length
     },

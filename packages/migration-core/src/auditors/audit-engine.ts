@@ -135,12 +135,12 @@ export function auditBundle(bundle: WordPressSourceBundle): AuditResult {
     });
 
     detectShortcodes(item.content).forEach((shortcode, index) => {
-      const existing = shortcodeCounts.get(shortcode);
+      const existing = shortcodeCounts.get(shortcode.name);
       if (existing) {
         existing.count += 1;
         existing.exampleItemIds.add(item.id);
       } else {
-        shortcodeCounts.set(shortcode, {
+        shortcodeCounts.set(shortcode.name, {
           count: 1,
           exampleItemIds: new Set([item.id])
         });
@@ -151,8 +151,8 @@ export function auditBundle(bundle: WordPressSourceBundle): AuditResult {
         id: createIssueId("shortcode", item.id, index),
         severity: "warning",
         itemId: item.id,
-        title: `Shortcode detected: [${shortcode}]`,
-        detail: "Shortcodes are preserved as manual-fix issues because they usually depend on plugin-specific rendering.",
+        title: `Shortcode detected: [${shortcode.name}]`,
+        detail: `Shortcode ${shortcode.raw} is preserved as a manual-fix fallback because it depends on plugin-specific rendering.`,
         category: "shortcode"
       });
     });
@@ -187,8 +187,8 @@ export function auditBundle(bundle: WordPressSourceBundle): AuditResult {
     .sort((left, right) => right.count - left.count || left.blockName.localeCompare(right.blockName));
 
   const shortcodeInventory = [...shortcodeCounts.entries()]
-    .map(([shortcode, value]) => ({
-      shortcode,
+    .map(([shortcodeName, value]) => ({
+      shortcode: shortcodeName,
       count: value.count,
       exampleItemIds: [...value.exampleItemIds].sort().slice(0, 3)
     }))

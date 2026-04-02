@@ -13,12 +13,17 @@ export interface WorkflowOptions {
   location: string;
   outputDirectory?: string;
   targetUrl?: string;
+  /** Bearer token / Application Password for authenticated WordPress REST API access. */
+  authToken?: string;
 }
 
 export async function loadSourceBundle(options: WorkflowOptions): Promise<WordPressSourceBundle> {
-  return options.sourceKind === "wxr"
-    ? loadWxrSource(options.location)
-    : loadRestSource(options.location);
+  if (options.sourceKind === "wxr") {
+    return loadWxrSource(options.location);
+  }
+
+  const restOptions = options.authToken ? { authToken: options.authToken } : {};
+  return loadRestSource(options.location, restOptions);
 }
 
 export async function runMigrationWorkflow(options: WorkflowOptions): Promise<ExecutionArtifacts> {

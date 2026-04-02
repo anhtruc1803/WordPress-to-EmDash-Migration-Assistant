@@ -10,12 +10,21 @@ import type {
 import { ensureDirectory, writeJsonFile, writeTextFile } from "../utils/filesystem.js";
 import { renderAuditOnlyReport, renderMigrationReport } from "./markdown-report.js";
 
+// Formula injection characters that spreadsheet apps (Excel, Sheets) execute as formulas
+// when they appear as the first character in a cell.
+const FORMULA_INJECTION_CHARS = new Set(["=", "+", "-", "@", "\t", "\r"]);
+
 function escapeCsv(value: string): string {
-  if (value.includes(",") || value.includes("\"") || value.includes("\n")) {
-    return `"${value.replaceAll("\"", "\"\"")}"`;
+  // Prefix with a tab to neutralise formula injection if the value starts with a trigger char.
+  const sanitized = FORMULA_INJECTION_CHARS.has(value[0] ?? "")
+    ? `\t${value}`
+    : value;
+
+  if (sanitized.includes(",") || sanitized.includes("\"") || sanitized.includes("\n") || sanitized.includes("\t")) {
+    return `"${sanitized.replaceAll("\"", "\"\"")}"`;
   }
 
-  return value;
+  return sanitized;
 }
 
 function manualFixCsv(plan: ImportPlan): string {
@@ -33,6 +42,9 @@ function manualFixCsv(plan: ImportPlan): string {
   return `${[header, ...rows].join("\n")}\n`;
 }
 
+/** Increment when any artifact schema changes to allow downstream tools to detect incompatibilities. */
+export const ARTIFACT_SCHEMA_VERSION = "1.0.0";
+
 export async function writeExecutionArtifacts(
   outputDirectory: string,
   execution: ExecutionArtifacts
@@ -47,6 +59,7 @@ export async function writeExecutionArtifacts(
   const manualFixesPath = resolve(outputDirectory, "manual-fixes.csv");
 
   await writeJsonFile(summaryPath, {
+    schemaVersion: ARTIFACT_SCHEMA_VERSION,
     source: execution.bundle.source,
     sourceWarningCount: execution.bundle.sourceWarnings.length,
     sourceWarnings: execution.bundle.sourceWarnings,
@@ -56,9 +69,9 @@ export async function writeExecutionArtifacts(
     unresolvedItemCount: execution.plan.unresolvedItems.length,
     warningCount: execution.transform.warnings.length
   });
-  await writeJsonFile(auditResultPath, execution.audit);
-  await writeJsonFile(transformPreviewPath, execution.transform);
-  await writeJsonFile(importPlanPath, execution.plan);
+  await writeJsonFile(auditResultPath, { schemaVersion: ARTIFACT_SCHEMA_VERSION, ...execution.audit });
+  await writeJsonFile(transformPreviewPath, { schemaVersion: ARTIFACT_SCHEMA_VERSION, ...execution.transform });
+  await writeJsonFile(importPlanPath, { schemaVersion: ARTIFACT_SCHEMA_VERSION, ...execution.plan });
   await writeTextFile(
     migrationReportPath,
     renderMigrationReport(execution.bundle, execution.audit, execution.transform, execution.plan)
